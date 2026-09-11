@@ -10,8 +10,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-        with:
-          submodules: true
+
+      # only the two submodules this check needs - om_theme-selector is private on
+      # GitLab and the runner has no credentials for it, unlike the public GitHub ones
+      - name: Fetch core/OptionsMenu and addons/OptionsMenu-JapaneseFontPack
+        run: git submodule update --init core/OptionsMenu addons/OptionsMenu-JapaneseFontPack
 
       - name: CJK font path must match between core and addon
         run: |
@@ -26,3 +29,16 @@ jobs:
             exit 1
           fi
           echo "OK: addon ships the font at the path OptionsMenu expects (${CORE_PATH})"
+
+  # proves the GitLab auth plumbing works - no actual coherence check against
+  # om_theme-selector yet, that needs auditing what it assumes about the core first
+  theme-selector-fetch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Authenticate git for GitLab
+        run: git config --global url."https://oauth2:${{ secrets.GITLAB_TOKEN }}@gitlab.com/".insteadOf "https://gitlab.com/"
+
+      - name: Fetch addons/om_theme-selector
+        run: git submodule update --init addons/om_theme-selector
