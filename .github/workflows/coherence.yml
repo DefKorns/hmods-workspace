@@ -1,0 +1,28 @@
+name: Coherence check
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  japanese-font-pack:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: true
+
+      - name: CJK font path must match between core and addon
+        run: |
+          CORE_PATH=$(grep -oP '(?<=cjkFontPath = ")[^"]+' core/OptionsMenu/src/framework/texture.cpp)
+          if [ -z "$CORE_PATH" ]; then
+            echo "::error::couldn't find cjkFontPath in core/OptionsMenu/src/framework/texture.cpp - did it move or get renamed?"
+            exit 1
+          fi
+          ADDON_FILE="addons/OptionsMenu-JapaneseFontPack/mod${CORE_PATH}"
+          if [ ! -f "$ADDON_FILE" ]; then
+            echo "::error::OptionsMenu expects the CJK font at ${CORE_PATH}, but the addon doesn't ship $ADDON_FILE"
+            exit 1
+          fi
+          echo "OK: addon ships the font at the path OptionsMenu expects (${CORE_PATH})"
