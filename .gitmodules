@@ -1,9 +1,11 @@
 [submodule "core/OptionsMenu"]
 	path = core/OptionsMenu
 	url = https://github.com/DefKorns/OptionsMenu
+	branch = modern-ui-ttf
 [submodule "addons/om_theme-selector"]
 	path = addons/om_theme-selector
 	url = https://gitlab.com/DefKorns/om_theme-selector.git
+	branch = v2.0.2-translations
 [submodule "addons/OptionsMenu-JapaneseFontPack"]
 	path = addons/OptionsMenu-JapaneseFontPack
 	url = https://github.com/DefKorns/OptionsMenu-JapaneseFontPack
