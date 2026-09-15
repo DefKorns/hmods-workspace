@@ -1,0 +1,128 @@
+{
+    "folders": [
+        {
+            "name": "OptionsMenu",
+            "path": "../OptionsMenu"
+        },
+        {
+            "name": "om_theme-selector",
+            "path": "../om_theme-selector"
+        },
+        {
+            "name": "OptionsMenu-JapaneseFontPack",
+            "path": "../OptionsMenu-JapaneseFontPack"
+        },
+        {
+            "name": "hmods-workspace",
+            "path": "."
+        }
+    ],
+    "settings": {
+        "files.autoSave": "off",
+        "[bash]": {
+            "editor.formatOnSave": true,
+            "editor.tabSize": 2,
+            "editor.insertSpaces": true,
+            "editor.detectIndentation": false
+        },
+        "editor.formatOnSave": false,
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false,
+        "editor.renderWhitespace": "all",
+        "terminal.integrated.defaultProfile.windows": "Ubuntu (WSL)",
+        "shellformat.path": "C:\\bin\\shfmt_v3.12.0_windows_amd64.exe",
+        "window.zoomLevel": 0,
+        "files.associations": {
+            "b[0-9]*": "shellscript",
+            "p[0-9]*": "shellscript",
+            "om_*": "shellscript",
+            "install": "shellscript",
+            "uninstall": "shellscript",
+            "chmenu": "shellscript",
+            "fontfix": "shellscript",
+            "c[0-9]*": "properties",
+            "iosfwd": "cpp",
+            "atomic": "cpp",
+            "cctype": "cpp",
+            "chrono": "cpp",
+            "cmath": "cpp",
+            "compare": "cpp",
+            "concepts": "cpp",
+            "cstddef": "cpp",
+            "cstdint": "cpp",
+            "cstdio": "cpp",
+            "cstdlib": "cpp",
+            "cstring": "cpp",
+            "cwchar": "cpp",
+            "exception": "cpp",
+            "fstream": "cpp",
+            "initializer_list": "cpp",
+            "ios": "cpp",
+            "iostream": "cpp",
+            "istream": "cpp",
+            "iterator": "cpp",
+            "limits": "cpp",
+            "list": "cpp",
+            "map": "cpp",
+            "memory": "cpp",
+            "new": "cpp",
+            "ostream": "cpp",
+            "ratio": "cpp",
+            "sstream": "cpp",
+            "stdexcept": "cpp",
+            "streambuf": "cpp",
+            "string": "cpp",
+            "system_error": "cpp",
+            "thread": "cpp",
+            "tuple": "cpp",
+            "type_traits": "cpp",
+            "typeinfo": "cpp",
+            "utility": "cpp",
+            "vector": "cpp",
+            "xfacet": "cpp",
+            "xiosbase": "cpp",
+            "xlocale": "cpp",
+            "xlocinfo": "cpp",
+            "xlocnum": "cpp",
+            "xmemory": "cpp",
+            "xstddef": "cpp",
+            "xstring": "cpp",
+            "xtr1common": "cpp",
+            "xtree": "cpp",
+            "xutility": "cpp",
+            "algorithm": "cpp"
+        },
+        "explorer.confirmDragAndDrop": false,
+        "explorer.confirmDelete": false,
+        "[html]": {
+            "editor.defaultFormatter": null
+        },
+        "git.confirmSync": false,
+        "git.detectSubmodules": false,
+        "git.autoRepositoryDetection": "openEditors",
+        "vsicons.projectDetection.autoReload": true,
+        "vsicons.dontShowNewVersionMessage": true,
+        "workbench.iconTheme": "vscode-icons",
+        "shellcheck.enable": true,
+        "shellcheck.useWorkspaceRootAsCwd": true,
+        "shellcheck.run": "onSave",
+        "shellcheck.enableQuickFix": true,
+        "shellcheck.customArgs": [
+            "-x"
+        ],
+        "shellcheck.exclude": [
+            "3046",
+            "3014",
+            "3051"
+        ],
+        "shfmtIde.flag": "-p -bn -ci -i=2 -ln=posix/sh",
+        "shfmt.executableArgs": [
+            "-i=2",
+            "-ci"
+        ],
+        "beautify.config": "",
+        "http.proxyAuthorization": null,
+        "cmake.configureOnOpen": false
+    }
+}
