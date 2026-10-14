@@ -13,14 +13,19 @@
             "path": "../OptionsMenu-JapaneseFontPack"
         },
         {
+            "name": "om-gamepad-remapping-tool",
+            "path": "../om-gamepad-remapping-tool"
+        },
+        {
             "name": "hmods-workspace",
             "path": "."
         }
     ],
     "settings": {
         "files.autoSave": "off",
-        "[bash]": {
-            "editor.formatOnSave": true,
+        "[shellscript]": {
+            "editor.defaultFormatter": "foxundermoon.shell-format",
+            "editor.formatOnSave": false,
             "editor.tabSize": 2,
             "editor.insertSpaces": true,
             "editor.detectIndentation": false
@@ -31,7 +36,22 @@
         "editor.detectIndentation": false,
         "editor.renderWhitespace": "all",
         "terminal.integrated.defaultProfile.windows": "Ubuntu (WSL)",
-        "shellformat.path": "C:\\bin\\shfmt_v3.12.0_windows_amd64.exe",
+        "shellformat.flag": "-i 2 -ci",
+        "search.exclude": {
+            "core/**": true,
+            "addons/**": true,
+            "export/**": true,
+            ".cache/**": true,
+            "**/out/**": true,
+            "**/vendor/OptionsMenu/**": true,
+            "**/toolchain/**": true
+        },
+        "files.watcherExclude": {
+            "core/**": true,
+            "addons/**": true,
+            ".cache/**": true,
+            "**/toolchain/**": true
+        },
         "window.zoomLevel": 0,
         "files.associations": {
             "b[0-9]*": "shellscript",
@@ -109,20 +129,14 @@
         "shellcheck.run": "onSave",
         "shellcheck.enableQuickFix": true,
         "shellcheck.customArgs": [
-            "-x"
+            "-x",
+            "--source-path=SCRIPTDIR"
         ],
         "shellcheck.exclude": [
             "3046",
             "3014",
             "3051"
         ],
-        "shfmtIde.flag": "-p -bn -ci -i=2 -ln=posix/sh",
-        "shfmt.executableArgs": [
-            "-i=2",
-            "-ci"
-        ],
-        "beautify.config": "",
-        "http.proxyAuthorization": null,
         "cmake.configureOnOpen": false
     }
 }

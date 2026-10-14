@@ -4,8 +4,12 @@
 	branch = modern-ui-ttf
 [submodule "addons/om_theme-selector"]
 	path = addons/om_theme-selector
-	url = https://gitlab.com/DefKorns/om_theme-selector.git
-	branch = v2.0.2-translations
+	url = https://github.com/DefKorns/om_theme-selector.git
+	branch = standalone-engine
 [submodule "addons/OptionsMenu-JapaneseFontPack"]
 	path = addons/OptionsMenu-JapaneseFontPack
 	url = https://github.com/DefKorns/OptionsMenu-JapaneseFontPack
+[submodule "addons/om-gamepad-remapping-tool"]
+	path = addons/om-gamepad-remapping-tool
+	url = https://github.com/DefKorns/om-gamepad-remapping-tool.git
+	branch = om_version
