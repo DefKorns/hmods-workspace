@@ -24,7 +24,13 @@
 #
 # Release: tags the working copy's HEAD and pushes the tag to GitHub, where the
 # addon's hmod-build workflow builds the .hmod and publishes the release
-#   export.sh --release patch|minor|major|vX.Y.Z [--remote NAME] [--wait] [--yes] [--dry-run] ID...|--all
+#   export.sh --release LEVEL [--bump B] [--remote NAME] [--wait] [--yes] [--dry-run] ID...|--all
+#   LEVEL      patch|minor|major  next version: v1.2.3 -> v1.2.4, v2.0.0-rc1 -> v2.0.1
+#              alpha|beta|rc      pre-release: v1.2.3 -> v1.2.4-alpha1, v2.0.0-alpha11 -> v2.0.0-alpha12,
+#                                 v2.0.0-alpha11 -> v2.0.0-beta1; never back from beta to alpha
+#              final              finishes a pre-release: v2.0.0-rc1 -> v2.0.0
+#              vX.Y.Z[-rcN]       exactly that tag
+#   --bump     patch|minor|major  version a new pre-release cycle starts from (default patch)
 #   --remote   remote to push the tag to (default: the first one on github.com)
 #   --wait     wait for the release and download its .hmods into export/ (needs gh)
 #   --yes      don't ask for confirmation
@@ -39,6 +45,7 @@ zip=false
 list=false
 all=false
 release=""
+bump=""
 remote=""
 wait=false
 yes=false
@@ -66,6 +73,10 @@ while [ $# -gt 0 ]; do
       release="$2"
       shift 2
       ;;
+    --bump)
+      bump="$2"
+      shift 2
+      ;;
     --remote)
       remote="$2"
       shift 2
@@ -83,7 +94,7 @@ while [ $# -gt 0 ]; do
       shift
       ;;
     -h | --help)
-      sed -n '17,33p' "$0"
+      sed -n '/^# Exports/,/^set -euo/{/^set -euo/d;p;}' "$0"
       exit 0
       ;;
     -*) die "unknown option: $1" ;;
@@ -95,9 +106,17 @@ while [ $# -gt 0 ]; do
 done
 
 case "$release" in
+  "" | patch | minor | major | alpha | beta | rc | final) ;;
+  *) printf '%s' "$release" | grep -qE '^v?[0-9]+\.[0-9]+\.[0-9]+(-(alpha|beta|rc)[0-9]+)?$' ||
+    die "--release takes patch, minor, major, alpha, beta, rc, final or vX.Y.Z[-alphaN|-betaN|-rcN], not $release" ;;
+esac
+case "$bump" in
   "" | patch | minor | major) ;;
-  v[0-9]*.[0-9]*.[0-9]* | [0-9]*.[0-9]*.[0-9]*) ;;
-  *) die "--release takes patch, minor, major or vX.Y.Z, not $release" ;;
+  *) die "--bump takes patch, minor or major, not $bump" ;;
+esac
+case "$release" in
+  alpha | beta | rc | "") ;;
+  *) [ -z "$bump" ] || die "--bump only goes with --release alpha, beta or rc" ;;
 esac
 
 exportDir="$WORKSPACE/export"
@@ -153,24 +172,65 @@ githubRemote() {
   done
 }
 
+preRank() {
+  case "$1" in
+    alpha) echo 1 ;;
+    beta) echo 2 ;;
+    rc) echo 3 ;;
+    *) echo 0 ;;
+  esac
+}
+
+# prints the tag after $1, or the reason it can't and fails
 nextVersion() {
-  local latest="$1" major minor patch
+  local latest="$1" core pre="" channel number major minor patch
   case "$release" in
-    v[0-9]*)
-      printf '%s\n' "$release"
-      return
-      ;;
-    [0-9]*)
-      printf 'v%s\n' "$release"
+    v[0-9]* | [0-9]*)
+      printf 'v%s\n' "${release#v}"
       return
       ;;
   esac
-  IFS=. read -r major minor patch <<<"${latest#v}"
-  patch="${patch%%-*}"
+  core="${latest#v}"
+  case "$core" in
+    *-*)
+      pre="${core#*-}"
+      core="${core%%-*}"
+      ;;
+  esac
+  IFS=. read -r major minor patch <<<"$core"
+  # alpha14, rc.2 or older forms such as b23
+  channel="$(printf '%s' "$pre" | sed -E 's/^([a-z]*).*/\1/')"
+  number="$(printf '%s' "$pre" | sed -E 's/^[a-z]*\.?([0-9]*).*/\1/')"
+
+  bumped() {
+    case "$1" in
+      patch) printf '%s.%s.%s' "$major" "$minor" "$((patch + 1))" ;;
+      minor) printf '%s.%s.0' "$major" "$((minor + 1))" ;;
+      major) printf '%s.0.0' "$((major + 1))" ;;
+    esac
+  }
+
   case "$release" in
-    patch) printf 'v%s.%s.%s\n' "$major" "$minor" "$((patch + 1))" ;;
-    minor) printf 'v%s.%s.0\n' "$major" "$((minor + 1))" ;;
-    major) printf 'v%s.0.0\n' "$((major + 1))" ;;
+    patch | minor | major) printf 'v%s\n' "$(bumped "$release")" ;;
+    final)
+      [ -n "$pre" ] || {
+        echo "$latest is not a pre-release"
+        return 1
+      }
+      printf 'v%s\n' "$core"
+      ;;
+    alpha | beta | rc)
+      if [ -z "$pre" ] || [ -n "$bump" ]; then
+        printf 'v%s-%s1\n' "$(bumped "${bump:-patch}")" "$release"
+      elif [ "$channel" = "$release" ]; then
+        printf 'v%s-%s%s\n' "$core" "$release" "$((${number:-0} + 1))"
+      elif [ "$(preRank "$release")" -gt "$(preRank "$channel")" ]; then
+        printf 'v%s-%s1\n' "$core" "$release"
+      else
+        echo "$latest is already past $release (use --bump to start a new cycle)"
+        return 1
+      fi
+      ;;
   esac
 }
 
@@ -181,7 +241,9 @@ planRelease() {
     warn "$id: no commit yet"
     return 1
   }
-  [ -z "$(git -C "$dir" status --porcelain --untracked-files=no)" ] || {
+  # submodule content is ignored: CI builds the pinned commits, and a Git for Windows
+  # checkout read from WSL shows line-ending noise there
+  [ -z "$(git -C "$dir" status --porcelain --untracked-files=no --ignore-submodules=dirty)" ] || {
     warn "$id: uncommitted changes"
     return 1
   }
@@ -211,7 +273,10 @@ planRelease() {
     return 1
   }
   latest="$(git -C "$dir" describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null || echo v0.0.0)"
-  tag="$(nextVersion "$latest")"
+  tag="$(nextVersion "$latest")" || {
+    warn "$id: $tag"
+    return 1
+  }
   git -C "$dir" rev-parse -q --verify "refs/tags/$tag" >/dev/null && {
     warn "$id: tag $tag already exists"
     return 1
@@ -221,7 +286,7 @@ planRelease() {
   plan_remotes+=("$rname")
   plan_repos+=("$(githubRepo "$url")")
   plan_tags+=("$tag")
-  printf '  %-34s %-12s -> %-10s %s (%s)\n' "$id" "$latest" "$tag" "$rname" "$url"
+  printf '  %-34s %-15s -> %-15s %s (%s)\n' "$id" "$latest" "$tag" "$rname" "$url"
 }
 
 waitForRelease() {
@@ -334,7 +399,11 @@ for id in "${ids[@]}"; do
     failed+=("$id")
     continue
   fi
-  rm -f "$dir"/out/*.hmod
+  if ! rm -f "$dir"/out/*.hmod; then
+    warn "$id: can't remove the previous out/*.hmod (made by a root container? delete out/ by hand)"
+    failed+=("$id")
+    continue
+  fi
   # older addons predate hmod-build: their default target makes the .hmod
   target=""
   usesHmodBuild "$dir" && target=hmod

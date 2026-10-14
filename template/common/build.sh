@@ -22,8 +22,12 @@ fi
 src="$PWD"
 command -v cygpath >/dev/null && src="$(cygpath -m "$PWD")"
 
+# on Linux/WSL, files a root container writes stay root-owned and can't be removed later
+user=()
+[ "$(uname -s)" = Linux ] && user=(--user "$(id -u):$(id -g)" -e HOME=/tmp)
+
 echo "==> Running make inside the container..."
-docker run --rm -v "$src:/src" -w /src "$IMAGE" \
+docker run --rm "${user[@]}" -v "$src:/src" -w /src "$IMAGE" \
   sh -c "git config --global --add safe.directory '*' 2>/dev/null; make CROSS_PREFIX=arm-linux-gnueabihf- $*"
 
 # framework objects would leave the vendor submodule dirty

@@ -39,11 +39,18 @@ hostPath() {
   if command -v cygpath >/dev/null; then cygpath -m "$1"; else printf '%s\n' "$1"; fi
 }
 
+# on Linux/WSL, files a root container writes stay root-owned and can't be removed later
+dockerUser() {
+  [ "$(uname -s)" = Linux ] && printf '%s\n' --user "$(id -u):$(id -g)" -e HOME=/tmp
+  return 0
+}
+
 # runs make in the toolchain image, with $1 mounted as the working directory
 dockerMake() {
   local dir="$1"
   shift
-  docker run --rm -v "$(hostPath "$dir"):/src" -w /src "$IMAGE" \
+  # shellcheck disable=SC2046
+  docker run --rm $(dockerUser) -v "$(hostPath "$dir"):/src" -w /src "$IMAGE" \
     sh -c "git config --global --add safe.directory '*' 2>/dev/null; make CROSS_PREFIX=arm-linux-gnueabihf- $*"
 }
 

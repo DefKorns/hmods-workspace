@@ -16,7 +16,7 @@
 #
 # Creates an addon next to the workspace (../<id>) and registers it in addons/.
 #   new-addon.sh [--name NAME] [--id ID] [--repo new|local|URL] [--public] [--cpp]
-#   --name    shown name, e.g. "Favorites" (hmod name: "Options Menu - Favorites")
+#   --name    shown name, e.g. "My Addon" (hmod name: "Options Menu - My Addon")
 #   --id      repository and hmod id (default: om-<name>)
 #   --repo    new: create github.com/<owner>/<id> with gh; URL: use that repository
 #             (scaffolded if empty, adopted as is if it already has a Makefile);
