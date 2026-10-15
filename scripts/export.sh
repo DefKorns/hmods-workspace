@@ -19,9 +19,8 @@
 # Local: builds into export/<id>.hmod and records it in export/manifest.tsv
 #   export.sh [--pinned] [--zip] [ID...]
 #   ID...     addons to export (default: every addon registered in addons/)
-#   --pinned  build the commits pinned in addons/ instead of the ../<id> working copies
-#   --zip     also pack the exported .hmods into export/options-menu-addons-<date>.zip
-#
+#   --pinned  build the commits the workspace pins instead of the addons/<id> working copies
+#   --zip     also pack the exported .hmods into export/options-menu-addons-<date>.zip#
 # Release: tags the working copy's HEAD and pushes the tag to GitHub, where the
 # addon's hmod-build workflow builds the .hmod and publishes the release
 #   export.sh --release LEVEL [--bump B] [--remote NAME] [--wait] [--yes] [--dry-run] ID...|--all
@@ -122,13 +121,22 @@ esac
 exportDir="$WORKSPACE/export"
 manifest="$exportDir/manifest.tsv"
 
+# --pinned: a throwaway worktree at the commit the workspace index pins, under .cache/
 sourceDir() {
-  if $pinned; then
-    [ -f "$WORKSPACE/addons/$1/Makefile" ] && printf '%s\n' "$WORKSPACE/addons/$1"
-  else
-    addonDir "$1"
+  local dir sha wt
+  dir="$(addonDir "$1")"
+  if ! $pinned || [ -z "$dir" ]; then
+    printf '%s\n' "$dir"
+    return 0
   fi
-  return 0
+  sha="$(git -C "$WORKSPACE" ls-files -s "addons/$1" | awk '{print $2}')"
+  wt="$WORKSPACE/.cache/pinned/$1"
+  if [ "$(git -C "$wt" rev-parse HEAD 2>/dev/null)" != "$sha" ]; then
+    git -C "$dir" worktree remove --force "$wt" >/dev/null 2>&1 || true
+    git -C "$dir" worktree prune
+    git -C "$dir" worktree add -q --detach "$wt" "$sha" >&2 || return 0
+  fi
+  printf '%s\n' "$wt"
 }
 
 if [ ${#ids[@]} -eq 0 ]; then
@@ -319,8 +327,8 @@ doRelease() {
   info "Release plan"
   for id in "${ids[@]}"; do
     dir="$(addonDir "$id")"
-    if [ -z "$dir" ] || [ "$dir" != "$HMODS_ROOT/$id" ]; then
-      warn "$id: no working copy at ../$id"
+    if [ -z "$dir" ]; then
+      warn "$id: addons/$id is not checked out"
       failed+=("$id")
       continue
     fi

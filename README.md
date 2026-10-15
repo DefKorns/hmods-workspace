@@ -1,15 +1,29 @@
 # hmods-workspace
 
-Development environment for [Options Menu](https://github.com/DefKorns/OptionsMenu) and its add-ons.
+Development environment for [Options Menu](https://github.com/DefKorns/OptionsMenu) and its add-ons, in one clone:
 
-Each project is worked on in its own folder next to this one (`../OptionsMenu`, `../om_theme-selector`, ...). The submodules in `core/` and `addons/` pin a set of versions known to work together, and `addons/` is the list of add-ons the scripts know about. Open `hmods-workspace.code-workspace` in VS Code to get every project in one window.
+```text
+core/OptionsMenu/                     Options Menu
+addons/<id>/                          one folder per add-on (the list the scripts work on)
+tools/hmod-build/                     shared packaging and release workflow
+tools/classicmini-cross-toolchain/    the Docker toolchain (published on GHCR)
+tools/pngpack/  tools/hakchi-repo/
+docs/<repo>.wiki/                     the GitHub wikis
+scripts/                              setup, new-addon, export, bump
+```
+
+Every project is a submodule and also its working copy: work, commit and push inside its folder as in any repository. The workspace commit pins a set of versions known to work together. Open `hmods-workspace.code-workspace` in VS Code to get every project in one window.
+
+```sh
+git clone --recursive https://github.com/DefKorns/hmods-workspace.git
+cd hmods-workspace && scripts/setup.sh
+```
 
 Run the scripts from Git Bash or WSL. They need git and Docker; `gh` (logged in) is needed to create GitHub repositories and to wait for releases.
 
 Under WSL:
 
 - install `gh` there too (`sudo apt install gh`, then `gh auth login`); the Windows one isn't used
-- checkouts made by Git for Windows (`core.autocrlf=true`) can show submodules as modified because of line endings; `--release` ignores changes inside submodules
 - don't alternate shells when building the same add-on: files built from Git Bash show up as owned by root in WSL, which then can't replace them. Delete that add-on's `out/` from Windows (Explorer or Git Bash) and build again
 
 ## Setup
@@ -18,9 +32,11 @@ Under WSL:
 scripts/setup.sh
 ```
 
-- fetches the workspace submodules that aren't checked out yet
-- builds the `classicmini-cross-toolchain:jessie-armhf` Docker image if it's missing. The console files it needs (`toolchain/vendor`) come from `../optionsmenu-vendor`, from `--vendor DIR`, or are cloned from the private `DefKorns/optionsmenu-vendor`
-- lists the add-ons and the folder each one builds from
+- fetches the submodules that aren't checked out yet
+- puts each one on its `.gitmodules` branch (a fresh submodule is a detached HEAD)
+- sets `core.autocrlf=input` and `core.eol=lf` in every checkout: files are LF everywhere
+- pulls the toolchain image pinned by `tools/hmod-build` (`toolchain-image.sh`)
+- lists the add-ons with their branch and whether they have uncommitted changes
 
 ## New add-on
 
@@ -30,24 +46,32 @@ scripts/new-addon.sh --name "My Addon" --repo new      # private github.com/<own
 scripts/new-addon.sh --name "My Addon" --repo https://github.com/<owner>/<repo>.git --cpp
 ```
 
-`<owner>` is `$GITHUB_OWNER` (default `DefKorns`). Creates `../<id>` with the `vendor/OptionsMenu` (`modern-ui-ttf`), `toolchain` and `hmod-build` submodules, a Makefile, `build.sh`, the CI workflow pinned to the `hmod-build` commit, an uninstall script and a sample **Options Menu → _name_** screen with its own translations. `--cpp` adds a C++ program built against the Options Menu framework.
+`<owner>` is `$GITHUB_OWNER` (default `DefKorns`). Creates `addons/<id>` with the `vendor/OptionsMenu` (`modern-ui-ttf`) and `vendor/hmod-build` (latest release tag) submodules, a Makefile, `build.sh`, the CI workflow pinned to the same `hmod-build` tag, an uninstall script and a sample **Options Menu → _name_** screen with its own translations. `--cpp` adds a C++ program built against the Options Menu framework.
 
-Nothing is committed: the scaffold is left staged. Commit it, then run the same command again to create/push the GitHub repository, register it in `addons/` (staged) and add it to the VS Code workspace.
+Nothing is committed: the scaffold is left staged. Commit it, then run the same command again to create/push the GitHub repository, register it as a workspace submodule (staged) and add it to the VS Code workspace.
 
-An existing add-on (already in `../<id>`, or a repository URL whose Makefile uses `hmod-build`) is adopted as is: `scripts/new-addon.sh --id <id>`.
+An existing add-on (already in `addons/<id>`, or a repository URL whose Makefile uses `hmod-build`) is adopted as is: `scripts/new-addon.sh --id <id>`.
 
-The CI of a C++ add-on builds the toolchain image from a private repository, so it fails until the repository has the secrets that `hmod-build`'s workflow expects. Set them by hand in the repository settings; shell-only add-ons don't need them.
+## Bump a shared dependency
+
+```sh
+scripts/bump.sh hmod-build           # every repo to the latest hmod-build tag (submodule + workflow)
+scripts/bump.sh hmod-build v1.1.0
+scripts/bump.sh OptionsMenu          # every add-on's vendor/OptionsMenu to core/OptionsMenu's HEAD
+```
+
+Only stages; commit each repository. The toolchain image is pinned by `hmod-build`, so bumping `hmod-build` also moves the toolchain. `bump.sh OptionsMenu` accepts an unpushed core commit, to build the add-ons against local changes; push it before committing the bump, or undo with `git submodule update vendor/OptionsMenu`.
 
 ## Export
 
 Every add-on is exported as its own `.hmod`, the same file `make hmod` builds.
 
-Local build, from the `../<id>` working copies:
+Local build, from the `addons/<id>` working copies:
 
 ```sh
 scripts/export.sh                    # every add-on in addons/
 scripts/export.sh om-my-addon        # just these
-scripts/export.sh --pinned           # the commits pinned in addons/ instead
+scripts/export.sh --pinned           # the commits the workspace pins instead
 scripts/export.sh --zip              # also export/options-menu-addons-<date>.zip
 scripts/export.sh --list             # what would be built, and from where
 ```

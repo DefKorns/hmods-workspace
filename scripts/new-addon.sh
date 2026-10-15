@@ -14,7 +14,7 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Creates an addon next to the workspace (../<id>) and registers it in addons/.
+# Creates an addon in addons/<id> and registers it as a workspace submodule.
 #   new-addon.sh [--name NAME] [--id ID] [--repo new|local|URL] [--public] [--cpp]
 #   --name    shown name, e.g. "My Addon" (hmod name: "Options Menu - My Addon")
 #   --id      repository and hmod id (default: om-<name>)
@@ -92,7 +92,7 @@ fillTemplate() {
     -e "s|@CMD@|$cmd|g"
     -e "s|@BIN@|$short|g"
     -e "s|@YEAR@|$(date +%Y)|g"
-    -e "s|@HMOD_BUILD_SHA@|$hmod_build_sha|g"
+    -e "s|@HMOD_BUILD_REF@|$hmod_build_ref|g"
     -e "s|@DOCKER@|$cpp|g"
   )
   (cd "$src" && find . -type f) | while read -r rel; do
@@ -114,11 +114,15 @@ scaffold() {
   # first, so .gitmodules is already covered by eol=lf
   cp "$WORKSPACE/template/common/.gitattributes" "$dest/.gitattributes"
 
-  info "Adding submodules"
+  hmod_build_ref="$(hmodBuildTag)"
+  [ -n "$hmod_build_ref" ] || die "tools/hmod-build has no v* tag, run scripts/setup.sh"
+  git -C "$dest" config core.autocrlf input
+  git -C "$dest" config core.eol lf
+  info "Adding submodules (hmod-build $hmod_build_ref)"
   git -C "$dest" submodule add -q -b "$CORE_BRANCH" "$CORE_URL" vendor/OptionsMenu
-  git -C "$dest" submodule add -q "$TOOLCHAIN_URL" toolchain
-  git -C "$dest" submodule add -q "$HMOD_BUILD_URL" hmod-build
-  hmod_build_sha="$(git -C "$dest/hmod-build" rev-parse HEAD)"
+  git -C "$dest" submodule add -q "$HMOD_BUILD_URL" vendor/hmod-build
+  git -C "$dest/vendor/hmod-build" checkout -q "$hmod_build_ref"
+  git -C "$dest" add vendor/hmod-build
 
   info "Writing the $($cpp && echo C++ || echo shell) template"
   fillTemplate "$WORKSPACE/template/common"
@@ -137,7 +141,7 @@ scaffold() {
   info "Scaffold staged in $dest (nothing committed)"
   printf '  suggested commit message: Initial add-on scaffold\n'
   if [ "$repo" = local ]; then
-    printf '  then: cd ../%s && ./build.sh\n' "$id"
+    printf '  then: cd addons/%s && ./build.sh\n' "$id"
   else
     printf '  after committing, publish and register it with: scripts/new-addon.sh --id %s --repo %s\n' "$id" "$repo"
   fi
@@ -200,15 +204,15 @@ registerSubmodule() {
   fi
 }
 
-# adds ../<id> to the VS Code workspace, before the hmods-workspace folder entry
+# adds addons/<id> to the VS Code workspace, before the hmods-workspace folder entry
 addToCodeWorkspace() {
   local file="$WORKSPACE/hmods-workspace.code-workspace"
   [ -f "$file" ] || return 0
-  grep -qF "\"path\": \"../$id\"" "$file" && return 0
+  grep -qF "\"path\": \"addons/$id\"" "$file" && return 0
   awk -v id="$id" '
     held != "" && /"name": "hmods-workspace"/ {
       indent = held; sub(/[^ ].*/, "", indent)
-      printf "%s{\n%s    \"name\": \"%s\",\n%s    \"path\": \"../%s\"\n%s},\n", indent, indent, id, indent, id, indent
+      printf "%s{\n%s    \"name\": \"%s\",\n%s    \"path\": \"addons/%s\"\n%s},\n", indent, indent, id, indent, id, indent
     }
     held != "" { print held }
     { held = $0 }
@@ -222,7 +226,7 @@ addToCodeWorkspace() {
   id="$(ask "Repository id" "om-$(slug "$name")")"
 }
 printf '%s' "$id" | grep -qE '^[A-Za-z0-9][A-Za-z0-9_.-]*$' || die "invalid id: $id"
-dest="$HMODS_ROOT/$id"
+dest="$WORKSPACE/addons/$id"
 url=""
 
 if [ ! -e "$dest" ]; then

@@ -1,22 +1,6 @@
 {
     "folders": [
         {
-            "name": "OptionsMenu",
-            "path": "../OptionsMenu"
-        },
-        {
-            "name": "om_theme-selector",
-            "path": "../om_theme-selector"
-        },
-        {
-            "name": "OptionsMenu-JapaneseFontPack",
-            "path": "../OptionsMenu-JapaneseFontPack"
-        },
-        {
-            "name": "om-gamepad-remapping-tool",
-            "path": "../om-gamepad-remapping-tool"
-        },
-        {
             "name": "hmods-workspace",
             "path": "."
         }
@@ -38,19 +22,15 @@
         "terminal.integrated.defaultProfile.windows": "Ubuntu (WSL)",
         "shellformat.flag": "-i 2 -ci",
         "search.exclude": {
-            "core/**": true,
-            "addons/**": true,
             "export/**": true,
             ".cache/**": true,
             "**/out/**": true,
-            "**/vendor/OptionsMenu/**": true,
-            "**/toolchain/**": true
+            "**/local/**": true,
+            "**/vendor/**": true
         },
         "files.watcherExclude": {
-            "core/**": true,
-            "addons/**": true,
             ".cache/**": true,
-            "**/toolchain/**": true
+            "**/local/**": true
         },
         "window.zoomLevel": 0,
         "files.associations": {
@@ -119,8 +99,11 @@
             "editor.defaultFormatter": null
         },
         "git.confirmSync": false,
+        // each project two levels down (core/, addons/, tools/, docs/) is a repo; their vendor/ submodules are not
         "git.detectSubmodules": false,
-        "git.autoRepositoryDetection": "openEditors",
+        "git.autoRepositoryDetection": "subFolders",
+        "git.repositoryScanMaxDepth": 2,
+        "git.openRepositoryInParentFolders": "never",
         "vsicons.projectDetection.autoReload": true,
         "vsicons.dontShowNewVersionMessage": true,
         "workbench.iconTheme": "vscode-icons",

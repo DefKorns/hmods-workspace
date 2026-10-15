@@ -14,32 +14,20 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Prepares the workspace: submodules, the toolchain Docker image, addon status.
-#   setup.sh [--vendor DIR] [--rebuild-image]
-#   --vendor DIR      console files for toolchain/vendor (default: ../optionsmenu-vendor, else cloned from GitHub)
-#   --rebuild-image   rebuild the toolchain image even if it exists
+# Prepares the workspace: submodules on their branches, LF line endings,
+# the toolchain Docker image, addon status.
+#   setup.sh
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
-vendor_dir=""
-rebuild=false
-while [ $# -gt 0 ]; do
-  case "$1" in
-    --vendor)
-      vendor_dir="$2"
-      shift 2
-      ;;
-    --rebuild-image)
-      rebuild=true
-      shift
-      ;;
-    -h | --help)
-      sed -n '17,20p' "$0"
-      exit 0
-      ;;
-    *) die "unknown option: $1" ;;
-  esac
-done
+case "${1:-}" in
+  "") ;;
+  -h | --help)
+    sed -n '17,19p' "$0"
+    exit 0
+    ;;
+  *) die "unknown option: $1" ;;
+esac
 
 checkTools() {
   local tool
@@ -54,46 +42,41 @@ checkTools() {
   fi
 }
 
+# every checkout stores and writes LF, whatever the global/system autocrlf says
+forceLf() {
+  git -C "$WORKSPACE" config core.autocrlf input
+  git -C "$WORKSPACE" config core.eol lf
+  git -C "$WORKSPACE" submodule foreach -q --recursive 'git config core.autocrlf input; git config core.eol lf'
+}
+
 initSubmodules() {
   local path
   git -C "$WORKSPACE" config -f .gitmodules --get-regexp '\.path$' | while read -r _ path; do
     [ -z "$(ls -A "$WORKSPACE/$path" 2>/dev/null)" ] || continue
     info "Fetching $path"
-    git -C "$WORKSPACE" submodule update --init "$path" || warn "couldn't fetch $path (private repository?)"
+    git -C "$WORKSPACE" -c core.autocrlf=input submodule update --init --recursive "$path" ||
+      warn "couldn't fetch $path (private repository?)"
   done
 }
 
-fetchVendor() {
-  local dest="$1"
-  if [ -z "$vendor_dir" ] && [ -d "$HMODS_ROOT/optionsmenu-vendor/sdl2-headers" ]; then
-    vendor_dir="$HMODS_ROOT/optionsmenu-vendor"
-  fi
-  if [ -n "$vendor_dir" ]; then
-    [ -d "$vendor_dir/sdl2-headers" ] || die "$vendor_dir has no sdl2-headers/"
-    info "Copying toolchain vendor files from $vendor_dir"
-    mkdir -p "$dest"
-    (cd "$vendor_dir" && tar -cf - --exclude=.git .) | (cd "$dest" && tar -xf -)
-  else
-    command -v gh >/dev/null || die "no vendor files: pass --vendor DIR or install gh"
-    info "Cloning $VENDOR_REPO"
-    gh repo clone "$VENDOR_REPO" "$dest" -- --depth 1
-  fi
-}
-
-buildImage() {
-  if ! $rebuild && docker image inspect "$IMAGE" >/dev/null 2>&1; then
-    info "Toolchain image $IMAGE already built"
-    return
-  fi
-  local toolchain="$WORKSPACE/.cache/toolchain"
-  if [ ! -f "$toolchain/Dockerfile.jessie-armhf" ]; then
-    info "Cloning the toolchain"
-    rm -rf "$toolchain"
-    git clone --depth 1 "$TOOLCHAIN_URL" "$toolchain"
-  fi
-  [ -d "$toolchain/vendor/sdl2-headers" ] || fetchVendor "$toolchain/vendor"
-  info "Building $IMAGE (takes a few minutes the first time)"
-  docker build -f "$toolchain/Dockerfile.jessie-armhf" -t "$IMAGE" "$toolchain"
+# a fresh submodule is a detached HEAD: put it on its .gitmodules branch to work on it
+checkoutBranches() {
+  local path branch dir
+  git -C "$WORKSPACE" config -f .gitmodules --get-regexp '\.branch$' | while read -r key branch; do
+    path="$(git -C "$WORKSPACE" config -f .gitmodules "${key%.branch}.path")"
+    dir="$WORKSPACE/$path"
+    [ -e "$dir/.git" ] || continue
+    [ -z "$(git -C "$dir" branch --show-current)" ] || continue
+    if git -C "$dir" rev-parse -q --verify "refs/heads/$branch" >/dev/null; then
+      git -C "$dir" switch -q "$branch"
+    elif git -C "$dir" rev-parse -q --verify "refs/remotes/origin/$branch" >/dev/null; then
+      git -C "$dir" switch -q -c "$branch" --track "origin/$branch"
+    else
+      warn "$path: branch $branch not found, left detached"
+      continue
+    fi
+    info "$path on $branch"
+  done
 }
 
 ignoreLocalDirs() {
@@ -104,23 +87,27 @@ ignoreLocalDirs() {
 }
 
 addonStatus() {
-  local id dir
+  local id dir branch dirty
   info "Addons"
   for id in $(registeredAddons); do
     dir="$(addonDir "$id")"
     if [ -z "$dir" ]; then
       printf '  %-36s not checked out\n' "$id"
-    elif [ "$dir" = "$HMODS_ROOT/$id" ]; then
-      printf '  %-36s ../%s\n' "$id" "$id"
-    else
-      printf '  %-36s addons/%s (pinned copy)\n' "$id" "$id"
+      continue
     fi
+    branch="$(git -C "$dir" branch --show-current)"
+    dirty=""
+    [ -z "$(git -C "$dir" status --porcelain --ignore-submodules=dirty)" ] || dirty=", uncommitted changes"
+    printf '  %-36s %s%s\n' "$id" "${branch:-detached}" "$dirty"
   done
 }
 
 checkTools
 ignoreLocalDirs
 initSubmodules
-buildImage
+forceLf
+checkoutBranches
+requireDocker
+info "Toolchain image: $IMAGE"
 addonStatus
-info "Done. New addon: scripts/new-addon.sh   Export: scripts/export.sh"
+info "Done. New addon: scripts/new-addon.sh   Export: scripts/export.sh   Bump: scripts/bump.sh"

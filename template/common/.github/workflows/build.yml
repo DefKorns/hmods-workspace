@@ -8,8 +8,8 @@ on:
 
 jobs:
   hmod:
-    # Keep in sync with the hmod-build submodule commit.
-    uses: DefKorns/hmod-build/.github/workflows/hmod.yml@@HMOD_BUILD_SHA@
+    # Keep in sync with the vendor/hmod-build submodule tag.
+    uses: DefKorns/hmod-build/.github/workflows/hmod.yml@@HMOD_BUILD_REF@
     with:
       release-name: @NAME@
       docker: @DOCKER@
