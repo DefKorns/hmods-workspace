@@ -3,21 +3,21 @@
 Development environment for [Options Menu](https://github.com/DefKorns/OptionsMenu) and its add-ons, in one clone:
 
 ```text
-core/OptionsMenu/                     Options Menu
-addons/<id>/                          one folder per add-on (the list the scripts work on)
-tools/hmod-build/                     shared packaging and release workflow
-tools/classicmini-cross-toolchain/    the Docker toolchain (published on GHCR)
-tools/pngpack/  tools/hakchi-repo/
-docs/<repo>.wiki/                     the GitHub wikis
-scripts/                              setup, new-addon, export, bump
+core/OptionsMenu/      Options Menu (submodule)
+tools/hmod-build/      shared packaging and release workflow (submodule)
+addons/<id>/           your add-ons, one clone each (not tracked by the workspace)
+scripts/               setup, new-addon, export, bump
+template/              what new-addon.sh scaffolds from
 ```
 
-Every project is a submodule and also its working copy: work, commit and push inside its folder as in any repository. The workspace commit pins a set of versions known to work together. Open `hmods-workspace.code-workspace` in VS Code to get every project in one window.
+`core/OptionsMenu` and `tools/hmod-build` are submodules and also working copies. Each add-on is a normal clone of its own repository under `addons/`, which the workspace ignores; the scripts work on whatever is there.
 
 ```sh
 git clone --recursive https://github.com/DefKorns/hmods-workspace.git
 cd hmods-workspace && scripts/setup.sh
 ```
+
+To get your own repositories back on another machine, list them in `projects.local` (format in `projects.example`, one `path url [branch]` per line) and run `scripts/setup.sh`. Paths outside `addons/` work too, e.g. tools you keep next to the workspace's.
 
 Run the scripts from Git Bash or WSL. They need git and Docker; `gh` (logged in) is needed to create GitHub repositories and to wait for releases.
 
@@ -32,7 +32,7 @@ Under WSL:
 scripts/setup.sh
 ```
 
-- fetches the submodules that aren't checked out yet
+- fetches the submodules that aren't checked out yet, and clones what `projects.local` lists and is missing
 - puts each one on its `.gitmodules` branch (a fresh submodule is a detached HEAD)
 - sets `core.autocrlf=input` and `core.eol=lf` in every checkout: files are LF everywhere
 - pulls the toolchain image pinned by `tools/hmod-build` (`toolchain-image.sh`)
@@ -48,7 +48,7 @@ scripts/new-addon.sh --name "My Addon" --repo https://github.com/<owner>/<repo>.
 
 `<owner>` is `$GITHUB_OWNER` (default `DefKorns`). Creates `addons/<id>` with the `vendor/OptionsMenu` (`modern-ui-ttf`) and `vendor/hmod-build` (latest release tag) submodules, a Makefile, `build.sh`, the CI workflow pinned to the same `hmod-build` tag, an uninstall script and a sample **Options Menu → _name_** screen with its own translations. `--cpp` adds a C++ program built against the Options Menu framework.
 
-Nothing is committed: the scaffold is left staged. Commit it, then run the same command again to create/push the GitHub repository, register it as a workspace submodule (staged) and add it to the VS Code workspace.
+Nothing is committed: the scaffold is left staged. Commit it, then run the same command again to create/push the GitHub repository and add it to `projects.local`.
 
 An existing add-on (already in `addons/<id>`, or a repository URL whose Makefile uses `hmod-build`) is adopted as is: `scripts/new-addon.sh --id <id>`.
 
@@ -71,7 +71,7 @@ Local build, from the `addons/<id>` working copies:
 ```sh
 scripts/export.sh                    # every add-on in addons/
 scripts/export.sh om-my-addon        # just these
-scripts/export.sh --pinned           # the commits the workspace pins instead
+scripts/export.sh --tagged           # each add-on's latest v* tag instead
 scripts/export.sh --zip              # also export/options-menu-addons-<date>.zip
 scripts/export.sh --list             # what would be built, and from where
 ```

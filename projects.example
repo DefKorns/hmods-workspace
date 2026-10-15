@@ -1,0 +1,4 @@
+# Copy to projects.local (not tracked) and list the repositories you work on,
+# one per line: path url [branch]. scripts/setup.sh clones the missing ones.
+addons/om-my-addon https://github.com/<owner>/om-my-addon.git master
+tools/pngpack https://github.com/DefKorns/pngpack.git master

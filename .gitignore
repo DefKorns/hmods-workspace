@@ -1,2 +1,6 @@
 .cache/
 export/
+/projects.local
+/addons/
+/tools/*
+!/tools/hmod-build/

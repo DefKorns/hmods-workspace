@@ -14,8 +14,9 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Prepares the workspace: submodules on their branches, LF line endings,
-# the toolchain Docker image, addon status.
+# Prepares the workspace: submodules on their branches, the repositories
+# listed in projects.local, LF line endings, the toolchain Docker image,
+# addon status.
 #   setup.sh
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
@@ -23,7 +24,7 @@ source "$(dirname "$0")/lib.sh"
 case "${1:-}" in
   "") ;;
   -h | --help)
-    sed -n '17,19p' "$0"
+    sed -n '17,20p' "$0"
     exit 0
     ;;
   *) die "unknown option: $1" ;;
@@ -47,6 +48,13 @@ forceLf() {
   git -C "$WORKSPACE" config core.autocrlf input
   git -C "$WORKSPACE" config core.eol lf
   git -C "$WORKSPACE" submodule foreach -q --recursive 'git config core.autocrlf input; git config core.eol lf'
+  local path
+  while read -r path _; do
+    [ -e "$WORKSPACE/$path/.git" ] || continue
+    git -C "$WORKSPACE/$path" config core.autocrlf input
+    git -C "$WORKSPACE/$path" config core.eol lf
+    git -C "$WORKSPACE/$path" submodule foreach -q --recursive 'git config core.autocrlf input; git config core.eol lf'
+  done < <(localProjects; for id in $(addonIds); do echo "addons/$id"; done)
 }
 
 initSubmodules() {
@@ -57,6 +65,21 @@ initSubmodules() {
     git -C "$WORKSPACE" -c core.autocrlf=input submodule update --init --recursive "$path" ||
       warn "couldn't fetch $path (private repository?)"
   done
+}
+
+# clones what projects.local lists and isn't there yet; existing folders are left alone
+cloneProjects() {
+  local path url branch
+  while read -r path url branch; do
+    [ ! -e "$WORKSPACE/$path" ] || continue
+    info "Cloning $path"
+    if git -c core.autocrlf=input clone -q ${branch:+-b "$branch"} "$url" "$WORKSPACE/$path"; then
+      git -C "$WORKSPACE/$path" -c core.autocrlf=input submodule update -q --init --recursive ||
+        warn "$path: couldn't fetch its submodules"
+    else
+      warn "couldn't clone $path from $url"
+    fi
+  done < <(localProjects)
 }
 
 # a fresh submodule is a detached HEAD: put it on its .gitmodules branch to work on it
@@ -89,7 +112,7 @@ ignoreLocalDirs() {
 addonStatus() {
   local id dir branch dirty
   info "Addons"
-  for id in $(registeredAddons); do
+  for id in $(addonIds); do
     dir="$(addonDir "$id")"
     if [ -z "$dir" ]; then
       printf '  %-36s not checked out\n' "$id"
@@ -105,6 +128,7 @@ addonStatus() {
 checkTools
 ignoreLocalDirs
 initSubmodules
+cloneProjects
 forceLf
 checkoutBranches
 requireDocker

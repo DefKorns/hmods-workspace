@@ -45,7 +45,7 @@ dockerUser() {
 }
 
 # runs make in the toolchain image in $1, which must be inside the workspace;
-# the whole workspace is mounted so a submodule's ../../.git/modules gitdir resolves
+# the whole workspace is mounted so core/OptionsMenu's gitdir under .git/modules resolves
 dockerMake() {
   local dir rel
   dir="$(cd "$1" && { pwd -W 2>/dev/null || pwd; })"
@@ -70,10 +70,19 @@ requireDocker() {
   IMAGE="$(sh "$HMOD_BUILD_DIR/toolchain-image.sh")" || die "couldn't get the toolchain image"
 }
 
-# addon ids registered as workspace submodules under addons/
-registeredAddons() {
-  git -C "$WORKSPACE" config -f .gitmodules --get-regexp '^submodule\.addons/.*\.path$' 2>/dev/null |
-    awk '{ sub(/^addons\//, "", $2); print $2 }'
+# addon ids: the git repositories under addons/
+addonIds() {
+  local dir
+  for dir in "$WORKSPACE"/addons/*/; do
+    [ -e "$dir.git" ] && basename "$dir"
+  done
+  return 0
+}
+
+# "path url [branch]" lines of projects.local, the repositories setup.sh clones
+localProjects() {
+  [ -f "$WORKSPACE/projects.local" ] || return 0
+  sed -e 's/#.*//' -e 's/[[:space:]]*$//' "$WORKSPACE/projects.local" | grep -v '^$' || true
 }
 
 addonDir() {

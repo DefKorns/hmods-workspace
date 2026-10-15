@@ -39,7 +39,7 @@ esac
 repos() {
   printf '%s\n' "$CORE_DIR"
   local id
-  for id in $(registeredAddons); do addonDir "$id"; done
+  for id in $(addonIds); do addonDir "$id"; done
 }
 
 bumpHmodBuild() {

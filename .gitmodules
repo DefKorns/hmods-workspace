@@ -2,46 +2,7 @@
 	path = core/OptionsMenu
 	url = https://github.com/DefKorns/OptionsMenu
 	branch = modern-ui-ttf
-[submodule "addons/om_theme-selector"]
-	path = addons/om_theme-selector
-	url = https://github.com/DefKorns/om_theme-selector.git
-	branch = standalone-engine
-[submodule "addons/OptionsMenu-JapaneseFontPack"]
-	path = addons/OptionsMenu-JapaneseFontPack
-	url = https://github.com/DefKorns/OptionsMenu-JapaneseFontPack
-[submodule "addons/om-gamepad-remapping-tool"]
-	path = addons/om-gamepad-remapping-tool
-	url = https://github.com/DefKorns/om-gamepad-remapping-tool.git
-	branch = om_version
-[submodule "addons/om_console-language"]
-	path = addons/om_console-language
-	url = https://github.com/DefKorns/om_console-language.git
-	branch = om-modern
 [submodule "tools/hmod-build"]
 	path = tools/hmod-build
 	url = https://github.com/DefKorns/hmod-build.git
-	branch = master
-[submodule "tools/classicmini-cross-toolchain"]
-	path = tools/classicmini-cross-toolchain
-	url = https://github.com/DefKorns/classicmini-cross-toolchain.git
-	branch = master
-[submodule "tools/pngpack"]
-	path = tools/pngpack
-	url = https://github.com/DefKorns/pngpack.git
-	branch = master
-[submodule "tools/hakchi-repo"]
-	path = tools/hakchi-repo
-	url = https://github.com/DefKorns/hakchi-repo.git
-	branch = master
-[submodule "addons/famicom-clovercon-fix"]
-	path = addons/famicom-clovercon-fix
-	url = https://github.com/DefKorns/famicom-clovercon-fix.git
-	branch = master
-[submodule "docs/OptionsMenu.wiki"]
-	path = docs/OptionsMenu.wiki
-	url = https://github.com/DefKorns/OptionsMenu.wiki.git
-	branch = master
-[submodule "docs/om_theme-selector.wiki"]
-	path = docs/om_theme-selector.wiki
-	url = https://github.com/DefKorns/om_theme-selector.wiki.git
 	branch = master

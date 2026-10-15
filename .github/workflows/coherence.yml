@@ -11,9 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # only the two submodules this check needs
       - name: Fetch core/OptionsMenu and addons/OptionsMenu-JapaneseFontPack
-        run: git submodule update --init core/OptionsMenu addons/OptionsMenu-JapaneseFontPack
+        run: |
+          git submodule update --init core/OptionsMenu
+          git clone --depth 1 https://github.com/DefKorns/OptionsMenu-JapaneseFontPack.git addons/OptionsMenu-JapaneseFontPack
 
       - name: CJK font path must match between core and addon
         run: |

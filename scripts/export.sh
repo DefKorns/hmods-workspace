@@ -17,9 +17,9 @@
 # Exports each addon as its own .hmod, locally or as a GitHub release.
 #
 # Local: builds into export/<id>.hmod and records it in export/manifest.tsv
-#   export.sh [--pinned] [--zip] [ID...]
-#   ID...     addons to export (default: every addon registered in addons/)
-#   --pinned  build the commits the workspace pins instead of the addons/<id> working copies
+#   export.sh [--tagged] [--zip] [ID...]
+#   ID...     addons to export (default: every addon in addons/)
+#   --tagged  build each addon's latest v* tag instead of its working copy
 #   --zip     also pack the exported .hmods into export/options-menu-addons-<date>.zip#
 # Release: tags the working copy's HEAD and pushes the tag to GitHub, where the
 # addon's hmod-build workflow builds the .hmod and publishes the release
@@ -39,7 +39,7 @@
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
-pinned=false
+tagged=false
 zip=false
 list=false
 all=false
@@ -52,8 +52,8 @@ dry=false
 ids=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    --pinned)
-      pinned=true
+    --tagged)
+      tagged=true
       shift
       ;;
     --zip)
@@ -121,28 +121,39 @@ esac
 exportDir="$WORKSPACE/export"
 manifest="$exportDir/manifest.tsv"
 
-# --pinned: a throwaway worktree at the commit the workspace index pins, under .cache/
+# --tagged: a local clone at the addon's latest v* tag, under .cache/; not a worktree,
+# whose absolute Windows gitdir path git can't follow inside the container
 sourceDir() {
-  local dir sha wt
+  local dir tag sha wt
   dir="$(addonDir "$1")"
-  if ! $pinned || [ -z "$dir" ]; then
+  if ! $tagged || [ -z "$dir" ]; then
     printf '%s\n' "$dir"
     return 0
   fi
-  sha="$(git -C "$WORKSPACE" ls-files -s "addons/$1" | awk '{print $2}')"
-  wt="$WORKSPACE/.cache/pinned/$1"
-  if [ "$(git -C "$wt" rev-parse HEAD 2>/dev/null)" != "$sha" ]; then
-    git -C "$dir" worktree remove --force "$wt" >/dev/null 2>&1 || true
-    git -C "$dir" worktree prune
-    git -C "$dir" worktree add -q --detach "$wt" "$sha" >&2 || return 0
+  tag="$(git -C "$dir" describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null)" || {
+    warn "$1: no v* tag"
+    return 0
+  }
+  sha="$(git -C "$dir" rev-parse "$tag^{commit}")"
+  wt="$WORKSPACE/.cache/tagged/$1"
+  if [ ! -d "$wt/.git" ]; then
+    [ ! -e "$wt" ] || {
+      warn "$1: $wt exists and isn't a clone, move it away"
+      return 0
+    }
+    git clone -q --no-checkout "$dir" "$wt" >&2 || return 0
+  fi
+  if [ "$(git -C "$wt" rev-parse -q --verify HEAD)" != "$sha" ]; then
+    git -C "$wt" fetch -q --tags origin >&2 || return 0
+    git -C "$wt" -c core.autocrlf=input checkout -q --detach "$sha" >&2 || return 0
   fi
   printf '%s\n' "$wt"
 }
 
 if [ ${#ids[@]} -eq 0 ]; then
   [ -z "$release" ] || $all || die "--release needs the addon ids, or --all"
-  mapfile -t ids < <(registeredAddons)
-  [ ${#ids[@]} -gt 0 ] || die "no addons registered in addons/; add one with scripts/new-addon.sh"
+  mapfile -t ids < <(addonIds)
+  [ ${#ids[@]} -gt 0 ] || die "no addons in addons/; add one with scripts/new-addon.sh"
 fi
 
 if $list; then
@@ -249,7 +260,7 @@ planRelease() {
     warn "$id: no commit yet"
     return 1
   }
-  # submodule content is ignored: CI builds the pinned commits, and a Git for Windows
+  # submodule content is ignored: CI builds the commits they pin, and a Git for Windows
   # checkout read from WSL shows line-ending noise there
   [ -z "$(git -C "$dir" status --porcelain --untracked-files=no --ignore-submodules=dirty)" ] || {
     warn "$id: uncommitted changes"
@@ -321,7 +332,7 @@ waitForRelease() {
 }
 
 doRelease() {
-  $pinned && die "--release tags the working copies, it can't be combined with --pinned"
+  $tagged && die "--release tags the working copies, it can't be combined with --tagged"
   plan_ids=() plan_dirs=() plan_remotes=() plan_repos=() plan_tags=()
   failed=()
   info "Release plan"

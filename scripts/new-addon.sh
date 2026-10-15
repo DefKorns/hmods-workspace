@@ -14,17 +14,17 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
-# Creates an addon in addons/<id> and registers it as a workspace submodule.
+# Creates an addon in addons/<id> and adds it to projects.local.
 #   new-addon.sh [--name NAME] [--id ID] [--repo new|local|URL] [--public] [--cpp]
 #   --name    shown name, e.g. "My Addon" (hmod name: "Options Menu - My Addon")
 #   --id      repository and hmod id (default: om-<name>)
 #   --repo    new: create github.com/<owner>/<id> with gh; URL: use that repository
 #             (scaffolded if empty, adopted as is if it already has a Makefile);
-#             local: no remote and no workspace registration
+#             local: no remote, not added to projects.local
 #   --public  public GitHub repository (default private)
 #   --cpp     C++ addon built against the Options Menu framework (default: shell only)
 # Missing values are asked for. Nothing is committed: a new scaffold is only staged.
-# Commit it, then run the same command again to publish and register it.
+# Commit it, then run the same command again to publish it.
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
 
@@ -143,7 +143,7 @@ scaffold() {
   if [ "$repo" = local ]; then
     printf '  then: cd addons/%s && ./build.sh\n' "$id"
   else
-    printf '  after committing, publish and register it with: scripts/new-addon.sh --id %s --repo %s\n' "$id" "$repo"
+    printf '  after committing, publish it with: scripts/new-addon.sh --id %s --repo %s\n' "$id" "$repo"
   fi
 }
 
@@ -177,47 +177,20 @@ publish() {
   fi
 }
 
-registerSubmodule() {
+# adds addons/<id> to projects.local, so setup.sh clones it on another machine
+recordProject() {
   if [ -z "$url" ]; then
-    warn "no remote, so not registered in the workspace; once it has one, rerun with --repo new or --repo URL"
+    warn "no remote, so not added to projects.local; once it has one, rerun with --repo new or --repo URL"
     return
   fi
-  if registeredAddons | grep -qxF "$id"; then
-    info "addons/$id already registered"
+  if localProjects | awk '{ print $1 }' | grep -qxF "addons/$id"; then
+    info "addons/$id already in projects.local"
     return
   fi
-  # the workspace CI clones anonymously, so a github.com remote is registered by its https URL
-  local name repoPath branch
-  for name in $(git -C "$dest" remote); do
-    repoPath="$(githubRepo "$(git -C "$dest" remote get-url "$name")")"
-    [ -z "$repoPath" ] || {
-      url="https://github.com/$repoPath.git"
-      break
-    }
-  done
+  local branch
   branch="$(git -C "$dest" branch --show-current)"
-  info "Registering addons/$id in the workspace ($url${branch:+, $branch})"
-  if [ -n "$branch" ] && git ls-remote --exit-code --heads "$url" "$branch" >/dev/null 2>&1; then
-    git -C "$WORKSPACE" submodule add -q -b "$branch" "$url" "addons/$id"
-  else
-    git -C "$WORKSPACE" submodule add -q "$url" "addons/$id"
-  fi
-}
-
-# adds addons/<id> to the VS Code workspace, before the hmods-workspace folder entry
-addToCodeWorkspace() {
-  local file="$WORKSPACE/hmods-workspace.code-workspace"
-  [ -f "$file" ] || return 0
-  grep -qF "\"path\": \"addons/$id\"" "$file" && return 0
-  awk -v id="$id" '
-    held != "" && /"name": "hmods-workspace"/ {
-      indent = held; sub(/[^ ].*/, "", indent)
-      printf "%s{\n%s    \"name\": \"%s\",\n%s    \"path\": \"addons/%s\"\n%s},\n", indent, indent, id, indent, id, indent
-    }
-    held != "" { print held }
-    { held = $0 }
-    END { print held }
-  ' "$file" >"$file.tmp" && mv "$file.tmp" "$file"
+  info "Adding addons/$id to projects.local ($url${branch:+, $branch})"
+  printf 'addons/%s %s%s\n' "$id" "$url" "${branch:+ $branch}" >>"$WORKSPACE/projects.local"
 }
 
 [ -n "$id" ] || {
@@ -243,7 +216,6 @@ if [ ! -e "$dest" ]; then
   esac
   if ! isAddon "$dest"; then
     scaffold
-    addToCodeWorkspace
     exit 0
   fi
   info "$repo is already an addon, adopting it"
@@ -252,7 +224,5 @@ elif [ ! -d "$dest/.git" ]; then
 fi
 
 publish
-registerSubmodule
-addToCodeWorkspace
+recordProject
 info "Done: $dest"
-[ -z "$url" ] || printf '  addons/%s is staged in the workspace; suggested commit message: Add %s addon\n' "$id" "$id"
