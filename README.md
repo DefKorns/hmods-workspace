@@ -46,7 +46,7 @@ scripts/new-addon.sh --name "My Addon" --repo new      # private github.com/<own
 scripts/new-addon.sh --name "My Addon" --repo https://github.com/<owner>/<repo>.git --cpp
 ```
 
-`<owner>` is `$GITHUB_OWNER` (default `DefKorns`). Creates `addons/<id>` with the `vendor/OptionsMenu` (`modern-ui-ttf`) and `vendor/hmod-build` (latest release tag) submodules, a Makefile, `build.sh`, the CI workflow pinned to the same `hmod-build` tag, an uninstall script and a sample **Options Menu → _name_** screen with its own translations. `--cpp` adds a C++ program built against the Options Menu framework.
+`<owner>` is `$GITHUB_OWNER` (default `DefKorns`). Creates `addons/<id>` with the `vendor/OptionsMenu` (`master`) and `vendor/hmod-build` (latest release tag) submodules, a Makefile, `build.sh`, the CI workflow pinned to the same `hmod-build` tag, an uninstall script and a sample **Options Menu → _name_** screen with its own translations. `--cpp` adds a C++ program built against the Options Menu framework.
 
 Nothing is committed: the scaffold is left staged. Commit it, then run the same command again to create/push the GitHub repository and add it to `projects.local`.
 
