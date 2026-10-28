@@ -1,5 +1,7 @@
 # hmods-workspace
 
+[![pre-commit](https://img.shields.io/badge/pre--commit-enabled-brightgreen?logo=pre-commit)](https://github.com/pre-commit/pre-commit)
+
 Development environment for [Options Menu](https://github.com/DefKorns/OptionsMenu) and its add-ons, in one clone:
 
 ```text
