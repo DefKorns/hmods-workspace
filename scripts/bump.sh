@@ -49,7 +49,7 @@ bumpHmodBuild() {
   git -C "$dir/vendor/hmod-build" checkout -q "$ref"
   git -C "$dir" add vendor/hmod-build
   for wf in "$dir"/.github/workflows/*.yml; do
-    [ -f "$wf" ] && grep -q 'hmod-build/.github/workflows/hmod.yml@' "$wf" || continue
+    grep -qs 'hmod-build/.github/workflows/hmod.yml@' "$wf" || continue
     sed -i "s#\(hmod-build/.github/workflows/hmod.yml@\)[^[:space:]]*#\1$ref#" "$wf"
     git -C "$dir" add "${wf#"$dir"/}"
   done

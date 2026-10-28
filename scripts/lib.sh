@@ -90,6 +90,20 @@ addonDir() {
   return 0
 }
 
+# installs the pre-commit hook in each given repository that has a .pre-commit-config.yaml
+installHooks() {
+  local dir
+  if ! command -v pre-commit >/dev/null; then
+    warn "pre-commit not found (pip install pre-commit): commits won't be checked"
+    return 0
+  fi
+  for dir in "$@"; do
+    [ -f "$dir/.pre-commit-config.yaml" ] || continue
+    [ -e "$dir/.git" ] || continue
+    (cd "$dir" && pre-commit install -t pre-commit >/dev/null) || warn "$dir: couldn't install the pre-commit hook"
+  done
+}
+
 # latest v* tag of tools/hmod-build: the release new and bumped addons use
 hmodBuildTag() {
   git -C "$HMOD_BUILD_DIR" describe --tags --abbrev=0 --match 'v[0-9]*' 2>/dev/null

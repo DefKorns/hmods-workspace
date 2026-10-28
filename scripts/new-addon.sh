@@ -131,6 +131,7 @@ scaffold() {
     rm -rf "$dest/mod/etc/options_menu/$id/scripts"
   fi
   cp "$dest/vendor/OptionsMenu/LICENSE" "$dest/LICENSE"
+  installHooks "$dest"
 
   git -C "$dest" add -A
   local exe

@@ -1,0 +1,27 @@
+# runs on the staged files before each commit; set up with "pre-commit install" (scripts/setup.sh does it, see README → Setup)
+# licence texts and firmware/asset data stay byte for byte as they ship
+exclude: ^(LICENSE|.*OFL.*\.txt)$
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+        args: [--markdown-linebreak-ext=md]
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+        # @PLACEHOLDERS@ aren't valid YAML until new-addon.sh fills them
+        exclude: ^template/
+      - id: check-json
+        # VS Code settings are JSON with comments
+        exclude: ^\.vscode/
+      - id: check-merge-conflict
+  - repo: https://github.com/koalaman/shellcheck-precommit
+    rev: v0.11.0
+    hooks:
+      - id: shellcheck
+  - repo: https://github.com/DavidAnson/markdownlint-cli2
+    rev: v0.24.0
+    hooks:
+      - id: markdownlint-cli2

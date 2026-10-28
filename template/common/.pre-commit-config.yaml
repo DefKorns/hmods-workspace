@@ -1,6 +1,6 @@
 # runs on the staged files before each commit; set up with "pre-commit install" (see README → Contributing)
 # licence texts and firmware/asset data stay byte for byte as they ship
-exclude: ^(LICENSE|.*OFL.*\.txt|mod/etc/options_menu/console_language/assets/.*)$
+exclude: ^(LICENSE|.*OFL.*\.txt)$
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0

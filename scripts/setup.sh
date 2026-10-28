@@ -15,8 +15,8 @@
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #
 # Prepares the workspace: submodules on their branches, the repositories
-# listed in projects.local, LF line endings, the toolchain Docker image,
-# addon status.
+# listed in projects.local, LF line endings, pre-commit hooks, the toolchain
+# Docker image, addon status.
 #   setup.sh
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
@@ -102,6 +102,14 @@ checkoutBranches() {
   done
 }
 
+setupHooks() {
+  local -a dirs=("$WORKSPACE")
+  local path
+  while read -r _ path; do dirs+=("$WORKSPACE/$path"); done < <(git -C "$WORKSPACE" config -f .gitmodules --get-regexp '\.path$')
+  while read -r path _; do dirs+=("$WORKSPACE/$path"); done < <(localProjects)
+  installHooks "${dirs[@]}"
+}
+
 ignoreLocalDirs() {
   local ignore="$WORKSPACE/.gitignore" entry
   for entry in .cache/ export/; do
@@ -131,6 +139,7 @@ initSubmodules
 cloneProjects
 forceLf
 checkoutBranches
+setupHooks
 requireDocker
 info "Toolchain image: $IMAGE"
 addonStatus

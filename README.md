@@ -35,6 +35,7 @@ scripts/setup.sh
 - fetches the submodules that aren't checked out yet, and clones what `projects.local` lists and is missing
 - puts each one on its `.gitmodules` branch (a fresh submodule is a detached HEAD)
 - sets `core.autocrlf=input` and `core.eol=lf` in every checkout: files are LF everywhere
+- installs the [pre-commit](https://pre-commit.com/) hook in every checkout with a `.pre-commit-config.yaml` (needs `pip install pre-commit`); `pre-commit run --all-files` checks a whole repository
 - pulls the toolchain image pinned by `tools/hmod-build` (`toolchain-image.sh`)
 - lists the add-ons with their branch and whether they have uncommitted changes
 
