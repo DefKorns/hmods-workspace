@@ -115,11 +115,6 @@
       "-x",
       "--source-path=SCRIPTDIR"
     ],
-    "shellcheck.exclude": [
-      "3046",
-      "3014",
-      "3051"
-    ],
     "cmake.configureOnOpen": false,
     "better-comments.multilineComments": true,
     "better-comments.tags": [
